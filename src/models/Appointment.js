@@ -6,7 +6,7 @@ const appointmentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true // 
+      index: true
     },
 
     doctorName: {
@@ -24,14 +24,21 @@ const appointmentSchema = new mongoose.Schema(
     appointmentDateTime: {
       type: Date,
       required: true,
-      index: true //  used for sorting & reminders
+      index: true // sorting + reminders
     },
 
     status: {
       type: String,
       enum: ["scheduled", "completed", "cancelled"],
       default: "scheduled",
-      index: true //  filtering
+      index: true
+    },
+
+    //  Prevent duplicate reminders
+    reminderSent: {
+      type: Boolean,
+      default: false,
+      index: true
     },
 
     notes: {
@@ -43,18 +50,17 @@ const appointmentSchema = new mongoose.Schema(
 );
 
 /**
- *  COMPOUND INDEX (most important)
+ * COMPOUND INDEX
  * Used for:
- * - "my appointments"
+ * - my appointments
  * - date range queries
  * - sorting
  */
-appointmentSchema.index(
-  { userId: 1, appointmentDateTime: -1 }
-);
+appointmentSchema.index({ userId: 1, appointmentDateTime: -1 });
 
-
- // Optional text index (doctor search)
+/**
+ * TEXT SEARCH
+ */
 appointmentSchema.index({
   doctorName: "text",
   clinicName: "text"

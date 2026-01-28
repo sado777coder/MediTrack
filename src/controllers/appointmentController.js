@@ -1,8 +1,8 @@
 const AppointmentModel = require("../models/Appointment");
 
-
-  //CREATE APPOINTMENT
- 
+/**
+ * CREATE APPOINTMENT
+ */
 const createAppointment = async (req, res, next) => {
   try {
     const appointmentDateTime = new Date(req.body.appointmentDateTime);
@@ -16,12 +16,13 @@ const createAppointment = async (req, res, next) => {
     const appointment = await AppointmentModel.create({
       userId: req.user._id,
       ...req.body,
-      appointmentDateTime // normalized UTC
+      appointmentDateTime, // UTC normalized
+      reminderSent: false
     });
 
     res.status(201).json({
       message: "Appointment created",
-      data: appointment,
+      data: appointment
     });
   } catch (err) {
     next(err);
@@ -41,21 +42,19 @@ const getAppointments = async (req, res, next) => {
 
     const filter = { userId: req.user._id };
 
-    // Date range filter
+    // Date range
     if (fromDate || toDate) {
       filter.appointmentDateTime = {};
-      if (fromDate)
-        filter.appointmentDateTime.$gte = new Date(fromDate);
-      if (toDate)
-        filter.appointmentDateTime.$lte = new Date(toDate);
+      if (fromDate) filter.appointmentDateTime.$gte = new Date(fromDate);
+      if (toDate) filter.appointmentDateTime.$lte = new Date(toDate);
     }
 
-    // Doctor name search
+    // Doctor search
     if (doctorName) {
       filter.doctorName = { $regex: doctorName, $options: "i" };
     }
 
-    //  Status filter
+    // Status filter
     if (status) {
       filter.status = status;
     }
@@ -63,7 +62,7 @@ const getAppointments = async (req, res, next) => {
     const total = await AppointmentModel.countDocuments(filter);
 
     const appointments = await AppointmentModel.find(filter)
-      .sort({ appointmentDateTime: -1 }) 
+      .sort({ appointmentDateTime: -1 })
       .skip(skip)
       .limit(limit);
 
@@ -74,7 +73,7 @@ const getAppointments = async (req, res, next) => {
       pages: Math.ceil(total / limit),
       count: appointments.length,
       filters: { fromDate, toDate, doctorName, status },
-      data: appointments,
+      data: appointments
     });
   } catch (err) {
     next(err);
@@ -88,7 +87,7 @@ const getAppointmentById = async (req, res, next) => {
   try {
     const appointment = await AppointmentModel.findOne({
       _id: req.params.id,
-      userId: req.user._id,
+      userId: req.user._id
     });
 
     if (!appointment) {
@@ -97,7 +96,7 @@ const getAppointmentById = async (req, res, next) => {
 
     res.status(200).json({
       message: "Appointment fetched",
-      data: appointment,
+      data: appointment
     });
   } catch (err) {
     next(err);
@@ -113,6 +112,9 @@ const updateAppointment = async (req, res, next) => {
       req.body.appointmentDateTime = new Date(
         req.body.appointmentDateTime
       );
+
+      //  Reset reminder if rescheduled
+      req.body.reminderSent = false;
     }
 
     const appointment = await AppointmentModel.findOneAndUpdate(
@@ -127,20 +129,21 @@ const updateAppointment = async (req, res, next) => {
 
     res.status(200).json({
       message: "Appointment updated",
-      data: appointment,
+      data: appointment
     });
   } catch (err) {
     next(err);
   }
 };
 
-
- // DELETE APPOINTMENT
+/**
+ * DELETE APPOINTMENT
+ */
 const deleteAppointment = async (req, res, next) => {
   try {
     const appointment = await AppointmentModel.findOneAndDelete({
       _id: req.params.id,
-      userId: req.user._id,
+      userId: req.user._id
     });
 
     if (!appointment) {
@@ -148,11 +151,27 @@ const deleteAppointment = async (req, res, next) => {
     }
 
     res.status(200).json({
-      message: "Appointment deleted",
+      message: "Appointment deleted"
     });
   } catch (err) {
     next(err);
   }
+};
+
+/**
+ * FIND APPOINTMENTS FOR REMINDERS (CRON JOB)
+ */
+const findAppointmentsForReminders = async () => {
+  return AppointmentModel.find({
+    status: "scheduled",
+    reminderSent: false,
+    appointmentDateTime: {
+      $gte: new Date(),
+      $lte: new Date(Date.now() + 60 * 60 * 1000) // next 1 hour
+    }
+  })
+    .populate("userId", "name email")
+    .sort({ appointmentDateTime: 1 });
 };
 
 module.exports = {
@@ -161,4 +180,5 @@ module.exports = {
   getAppointmentById,
   updateAppointment,
   deleteAppointment,
+  findAppointmentsForReminders
 };
