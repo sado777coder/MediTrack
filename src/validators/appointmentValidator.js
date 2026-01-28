@@ -39,7 +39,11 @@ const updateAppointmentValidator = Joi.object({
 
   appointmentDateTime: Joi.date()
     .iso()
-    .optional(),
+    .optional()
+    .messages({
+      "date.base": "appointmentDateTime must be a valid date",
+      "date.format": "appointmentDateTime must be in ISO format"
+    }),
 
   status: Joi.string()
     .valid("scheduled", "completed", "cancelled")
@@ -47,6 +51,10 @@ const updateAppointmentValidator = Joi.object({
 
   notes: Joi.string()
     .trim()
+    .optional(),
+
+  // REQUIRED FOR REMINDERS
+  reminderSent: Joi.boolean()
     .optional()
 }).min(1);
 
