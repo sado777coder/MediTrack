@@ -2,39 +2,55 @@ const Joi = require("joi");
 
 // CREATE APPOINTMENT
 const createAppointmentValidator = Joi.object({
-  doctorName: Joi.string().required(),
+  doctorName: Joi.string()
+    .trim()
+    .required(),
 
-  clinicName: Joi.string().required(),
+  clinicName: Joi.string()
+    .trim()
+    .required(),
 
-  date: Joi.date().required(),
-
-  time: Joi.string().required(),
-
-  notes: Joi.string().optional(),
+  appointmentDateTime: Joi.date()
+    .iso()
+    .required()
+    .messages({
+      "date.base": "appointmentDateTime must be a valid date",
+      "date.format": "appointmentDateTime must be in ISO format"
+    }),
 
   status: Joi.string()
     .valid("scheduled", "completed", "cancelled")
     .default("scheduled"),
+
+  notes: Joi.string()
+    .trim()
+    .optional()
 });
 
 // UPDATE APPOINTMENT (at least one field required)
 const updateAppointmentValidator = Joi.object({
-  doctorName: Joi.string().optional(),
+  doctorName: Joi.string()
+    .trim()
+    .optional(),
 
-  clinicName: Joi.string().optional(),
+  clinicName: Joi.string()
+    .trim()
+    .optional(),
 
-  date: Joi.date().optional(),
-
-  time: Joi.string().optional(),
-
-  notes: Joi.string().optional(),
+  appointmentDateTime: Joi.date()
+    .iso()
+    .optional(),
 
   status: Joi.string()
     .valid("scheduled", "completed", "cancelled")
     .optional(),
+
+  notes: Joi.string()
+    .trim()
+    .optional()
 }).min(1);
 
 module.exports = {
   createAppointmentValidator,
-  updateAppointmentValidator,
+  updateAppointmentValidator
 };
