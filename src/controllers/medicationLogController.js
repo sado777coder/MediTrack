@@ -8,6 +8,7 @@ const createMedicationLog = async (req, res, next) => {
     const log = await MedicationLogModel.create({
       userId: req.user._id,
       ...req.body,
+      takenAt: req.body.takenAt || new Date() // default to now
     });
 
     res.status(201).json({
@@ -32,17 +33,9 @@ const getMedicationLogs = async (req, res, next) => {
 
     const filter = { userId: req.user._id };
 
-    // Status filter
-    if (status) {
-      filter.status = status;
-    }
+    if (status) filter.status = status;
+    if (medicationId) filter.medicationId = medicationId;
 
-    // Medication filter
-    if (medicationId) {
-      filter.medicationId = medicationId;
-    }
-
-    // Date range filter
     if (fromDate || toDate) {
       filter.takenAt = {};
       if (fromDate) filter.takenAt.$gte = new Date(fromDate);
@@ -81,14 +74,9 @@ const getMedicationLogById = async (req, res, next) => {
       userId: req.user._id,
     });
 
-    if (!log) {
-      return res.status(404).json({ message: "Medication log not found" });
-    }
+    if (!log) return res.status(404).json({ message: "Medication log not found" });
 
-    res.status(200).json({
-      message: "Medication log fetched",
-      data: log,
-    });
+    res.status(200).json({ message: "Medication log fetched", data: log });
   } catch (err) {
     next(err);
   }
@@ -105,14 +93,9 @@ const updateMedicationLog = async (req, res, next) => {
       { new: true, runValidators: true }
     );
 
-    if (!log) {
-      return res.status(404).json({ message: "Medication log not found" });
-    }
+    if (!log) return res.status(404).json({ message: "Medication log not found" });
 
-    res.status(200).json({
-      message: "Medication log updated",
-      data: log,
-    });
+    res.status(200).json({ message: "Medication log updated", data: log });
   } catch (err) {
     next(err);
   }
@@ -128,13 +111,9 @@ const deleteMedicationLog = async (req, res, next) => {
       userId: req.user._id,
     });
 
-    if (!log) {
-      return res.status(404).json({ message: "Medication log not found" });
-    }
+    if (!log) return res.status(404).json({ message: "Medication log not found" });
 
-    res.status(200).json({
-      message: "Medication log deleted",
-    });
+    res.status(200).json({ message: "Medication log deleted" });
   } catch (err) {
     next(err);
   }

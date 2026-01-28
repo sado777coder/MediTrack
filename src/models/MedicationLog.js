@@ -14,12 +14,12 @@ const medicationLogSchema = new mongoose.Schema(
     },
     takenAt: {
       type: Date,
-      required: true
+      default: Date.now // now defaults to current timestamp
     },
     status: {
       type: String,
       enum: ["taken", "missed", "skipped"],
-      required: true
+      default: "taken" // default status
     },
     notes: {
       type: String
@@ -27,5 +27,8 @@ const medicationLogSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Optional: add index for faster queries on user + medication + takenAt
+medicationLogSchema.index({ userId: 1, medicationId: 1, takenAt: -1 });
 
 module.exports = mongoose.model("MedicationLog", medicationLogSchema);
