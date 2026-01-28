@@ -1,13 +1,22 @@
 const AppointmentModel = require("../models/Appointment");
 
-/**
- * CREATE APPOINTMENT
- */
+
+  //CREATE APPOINTMENT
+ 
 const createAppointment = async (req, res, next) => {
   try {
+    const appointmentDateTime = new Date(req.body.appointmentDateTime);
+
+    if (isNaN(appointmentDateTime)) {
+      return res.status(400).json({
+        message: "Invalid appointmentDateTime"
+      });
+    }
+
     const appointment = await AppointmentModel.create({
       userId: req.user._id,
       ...req.body,
+      appointmentDateTime // normalized UTC
     });
 
     res.status(201).json({
@@ -28,15 +37,17 @@ const getAppointments = async (req, res, next) => {
     const limit = Number(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const { fromDate, toDate, doctorName } = req.query;
+    const { fromDate, toDate, doctorName, status } = req.query;
 
     const filter = { userId: req.user._id };
 
     // Date range filter
     if (fromDate || toDate) {
-      filter.date = {};
-      if (fromDate) filter.date.$gte = new Date(fromDate);
-      if (toDate) filter.date.$lte = new Date(toDate);
+      filter.appointmentDateTime = {};
+      if (fromDate)
+        filter.appointmentDateTime.$gte = new Date(fromDate);
+      if (toDate)
+        filter.appointmentDateTime.$lte = new Date(toDate);
     }
 
     // Doctor name search
@@ -44,10 +55,15 @@ const getAppointments = async (req, res, next) => {
       filter.doctorName = { $regex: doctorName, $options: "i" };
     }
 
+    //  Status filter
+    if (status) {
+      filter.status = status;
+    }
+
     const total = await AppointmentModel.countDocuments(filter);
 
     const appointments = await AppointmentModel.find(filter)
-      .sort({ date: -1 })
+      .sort({ appointmentDateTime: -1 }) 
       .skip(skip)
       .limit(limit);
 
@@ -57,7 +73,7 @@ const getAppointments = async (req, res, next) => {
       page,
       pages: Math.ceil(total / limit),
       count: appointments.length,
-      filters: { fromDate, toDate, doctorName },
+      filters: { fromDate, toDate, doctorName, status },
       data: appointments,
     });
   } catch (err) {
@@ -93,6 +109,12 @@ const getAppointmentById = async (req, res, next) => {
  */
 const updateAppointment = async (req, res, next) => {
   try {
+    if (req.body.appointmentDateTime) {
+      req.body.appointmentDateTime = new Date(
+        req.body.appointmentDateTime
+      );
+    }
+
     const appointment = await AppointmentModel.findOneAndUpdate(
       { _id: req.params.id, userId: req.user._id },
       req.body,
@@ -112,9 +134,8 @@ const updateAppointment = async (req, res, next) => {
   }
 };
 
-/**
- * DELETE APPOINTMENT
- */
+
+ // DELETE APPOINTMENT
 const deleteAppointment = async (req, res, next) => {
   try {
     const appointment = await AppointmentModel.findOneAndDelete({
