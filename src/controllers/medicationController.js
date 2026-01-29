@@ -29,30 +29,37 @@ const getMedications = async (req, res, next) => {
     const skip = (page - 1) * limit;
 
     const { active, startDate, endDate } = req.query;
-    const filter = { userId: req.user._id };
     const now = new Date();
+    const filter = { userId: req.user._id };
+    const andConditions = [];
 
     // Active / inactive filter
     if (active === "true") {
-  filter.startDate = { $lte: now };
-  filter.$or = [
-    { endDate: { $exists: false } },
-    { endDate: null },
-    { endDate: { $gte: now } },
-  ];
-} else if (active === "false") {
-  filter.endDate = { $lt: now };
-}
+      andConditions.push({
+        startDate: { $lte: now },
+        $or: [
+          { endDate: { $exists: false } },
+          { endDate: null },
+          { endDate: { $gte: now } },
+        ],
+      });
+    } else if (active === "false") {
+      andConditions.push({ endDate: { $lt: now } });
+    }
 
-// Date range filter (merge with existing startDate filter if present)
-if (startDate || endDate) {
-  filter.startDate = filter.startDate || {};
-  if (startDate) filter.startDate.$gte = new Date(startDate);
-  if (endDate) filter.startDate.$lte = new Date(endDate);
-}
+    // Date range filter
+    if (startDate || endDate) {
+      const range = {};
+      if (startDate) range.$gte = new Date(startDate);
+      if (endDate) range.$lte = new Date(endDate);
+      andConditions.push({ startDate: range });
+    }
+
+    if (andConditions.length > 0) {
+      filter.$and = andConditions;
+    }
 
     const total = await MedicationModel.countDocuments(filter);
-
     const medications = await MedicationModel.find(filter)
       .sort({ createdAt: -1 })
       .skip(skip)
