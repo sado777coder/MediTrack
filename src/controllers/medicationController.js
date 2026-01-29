@@ -34,23 +34,22 @@ const getMedications = async (req, res, next) => {
 
     // Active / inactive filter
     if (active === "true") {
-      filter.startDate = { $lte: now };
-      filter.$or = [
-        { endDate: { $exists: false } },
-        { endDate: null },
-        { endDate: { $gte: now } },
-      ];
-    } else if (active === "false") {
-      // Inactive = endDate exists AND < today
-      filter.endDate = { $lt: now };
-    }
+  filter.startDate = { $lte: now };
+  filter.$or = [
+    { endDate: { $exists: false } },
+    { endDate: null },
+    { endDate: { $gte: now } },
+  ];
+} else if (active === "false") {
+  filter.endDate = { $lt: now };
+}
 
-    // Date range filter (overrides startDate filter if provided)
-    if (startDate || endDate) {
-      filter.startDate = {};
-      if (startDate) filter.startDate.$gte = new Date(startDate);
-      if (endDate) filter.startDate.$lte = new Date(endDate);
-    }
+// Date range filter (merge with existing startDate filter if present)
+if (startDate || endDate) {
+  filter.startDate = filter.startDate || {};
+  if (startDate) filter.startDate.$gte = new Date(startDate);
+  if (endDate) filter.startDate.$lte = new Date(endDate);
+}
 
     const total = await MedicationModel.countDocuments(filter);
 
