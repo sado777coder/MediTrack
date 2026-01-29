@@ -24,6 +24,10 @@ const swaggerDocument = YAML.load(
   path.join(__dirname, "./docs/swagger.yaml")
 );
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+app.get("/api/docs/swagger.json", (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  res.send(swaggerDocument);
+});
 
 app.use("/api/users", userRoutes);
 app.use("/api/appointments", appointmentRoutes);
