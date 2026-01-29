@@ -29,21 +29,23 @@ const getMedications = async (req, res, next) => {
     const skip = (page - 1) * limit;
 
     const { active, startDate, endDate } = req.query;
-
     const filter = { userId: req.user._id };
-    const today = new Date();
+    const now = new Date();
 
     // Active / inactive filter
     if (active === "true") {
-      filter.startDate = { $lte: today };
-      filter.$or = [{ endDate: { $gte: today } }, { endDate: null }];
+      filter.startDate = { $lte: now };
+      filter.$or = [
+        { endDate: { $exists: false } },
+        { endDate: null },
+        { endDate: { $gte: now } },
+      ];
+    } else if (active === "false") {
+      // Inactive = endDate exists AND < today
+      filter.endDate = { $lt: now };
     }
 
-    if (active === "false") {
-      filter.endDate = { $lt: today };
-    }
-
-    // Date range filter
+    // Date range filter (overrides startDate filter if provided)
     if (startDate || endDate) {
       filter.startDate = {};
       if (startDate) filter.startDate.$gte = new Date(startDate);
