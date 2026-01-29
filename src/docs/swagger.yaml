@@ -1,0 +1,351 @@
+openapi: 3.0.3
+info:
+  title: MediTrack API
+  description: >
+    MediTrack is a healthcare management API for managing users,
+    appointments, medications, and medication logs.
+  version: 1.0.0
+  contact:
+    name: MediTrack API Support
+servers:
+  - url: http://localhost:3003
+    description: Local development
+  - url: https://meditrack-jxjg.onrender.com
+    description: Production
+
+tags:
+  - name: Auth
+  - name: Appointments
+  - name: Medications
+  - name: Medication Logs
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    RegisterRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          example: Amos Sottie
+        email:
+          type: string
+          example: user@example.com
+        password:
+          type: string
+          example: password123
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+
+    Appointment:
+      type: object
+      properties:
+        _id:
+          type: string
+        doctorName:
+          type: string
+        clinicName:
+          type: string
+        appointmentDateTime:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [scheduled, completed, cancelled]
+        reminderSent:
+          type: boolean
+        notes:
+          type: string
+
+    CreateAppointmentRequest:
+      type: object
+      required: [doctorName, clinicName, appointmentDateTime]
+      properties:
+        doctorName:
+          type: string
+        clinicName:
+          type: string
+        appointmentDateTime:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [scheduled, completed, cancelled]
+        notes:
+          type: string
+
+    Medication:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        dosage:
+          type: string
+        instructions:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        schedules:
+          type: array
+          items:
+            $ref: "#/components/schemas/MedicationSchedule"
+
+    MedicationSchedule:
+      type: object
+      properties:
+        time:
+          type: string
+          example: "08:00"
+        frequency:
+          type: string
+          enum: [daily, weekly]
+
+    MedicationLog:
+      type: object
+      properties:
+        _id:
+          type: string
+        medicationId:
+          type: string
+        takenAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [taken, missed, skipped]
+        notes:
+          type: string
+
+security:
+  - BearerAuth: []
+
+paths:
+  /api/users/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        201:
+          description: User registered successfully
+        400:
+          description: User already exists
+
+  /api/users/login:
+    post:
+      tags: [Auth]
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        200:
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /api/users/me:
+    get:
+      tags: [Auth]
+      summary: Get user profile
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: Profile fetched
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /api/appointments:
+    post:
+      tags: [Appointments]
+      summary: Create appointment
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAppointmentRequest"
+      responses:
+        201:
+          description: Appointment created
+
+    get:
+      tags: [Appointments]
+      summary: Get appointments (paginated & filtered)
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer }
+        - in: query
+          name: limit
+          schema: { type: integer }
+        - in: query
+          name: fromDate
+          schema: { type: string, format: date }
+        - in: query
+          name: toDate
+          schema: { type: string, format: date }
+        - in: query
+          name: doctorName
+          schema: { type: string }
+        - in: query
+          name: status
+          schema: { type: string }
+      responses:
+        200:
+          description: Appointments fetched
+
+  /api/appointments/{id}:
+    put:
+      tags: [Appointments]
+      summary: Update appointment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: Appointment updated
+
+    delete:
+      tags: [Appointments]
+      summary: Delete appointment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: Appointment deleted
+
+  /api/medications:
+    post:
+      tags: [Medications]
+      summary: Create medication
+      responses:
+        201:
+          description: Medication created
+
+    get:
+      tags: [Medications]
+      summary: Get medications
+      parameters:
+        - in: query
+          name: active
+          schema: { type: boolean }
+      responses:
+        200:
+          description: Medications fetched
+
+  /api/medications/{id}:
+    put:
+      tags: [Medications]
+      summary: Update medication
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+
+    delete:
+      tags: [Medications]
+      summary: Delete medication
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+
+  /api/medication-logs:
+    post:
+      tags: [Medication Logs]
+      summary: Create medication log
+      responses:
+        201:
+          description: Log created
+
+    get:
+      tags: [Medication Logs]
+      summary: Get medication logs
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string }
+      responses:
+        200:
+          description: Logs fetched
+
+  /api/medication-logs/{id}:
+    put:
+      tags: [Medication Logs]
+      summary: Update medication log
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
