@@ -35,17 +35,20 @@ const getMedications = async (req, res, next) => {
 
     // Active / inactive filter
     if (active === "true") {
-      andConditions.push({
-        startDate: { $lte: now },
-        $or: [
-          { endDate: { $exists: false } },
-          { endDate: null },
-          { endDate: { $gte: now } },
-        ],
-      });
-    } else if (active === "false") {
-      andConditions.push({ endDate: { $lt: now } });
-    }
+  andConditions.push({
+    startDate: { $lte: now }
+  });
+  andConditions.push({
+    $or: [
+      { endDate: { $gte: now } },
+      { endDate: null },
+      { endDate: { $exists: false } }
+    ]
+  });
+} else if (active === "false") {
+  // inactive = endDate < today
+  andConditions.push({ endDate: { $lt: now } });
+}
 
     // Date range filter
     if (startDate || endDate) {
