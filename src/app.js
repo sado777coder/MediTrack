@@ -23,11 +23,15 @@ app.use(logRequest);
 const swaggerDocument = YAML.load(
   path.join(__dirname, "./docs/swagger.yaml")
 );
-app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
+// expose raw JSON FIRST
 app.get("/api/docs/swagger.json", (req, res) => {
   res.setHeader("Content-Type", "application/json");
-  res.send(swaggerDocument);
+  res.json(swaggerDocument);
 });
+
+// swagger UI AFTER
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use("/api/users", userRoutes);
 app.use("/api/appointments", appointmentRoutes);
